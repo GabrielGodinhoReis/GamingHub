@@ -1,4 +1,6 @@
-import { Component, inject } from '@angular/core';
+
+import { Component, inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 
 import {
   MatButton,
@@ -6,20 +8,16 @@ import {
 } from '@angular/material/button';
 
 import { MatIcon } from '@angular/material/icon';
-
-import { RouterLink } from '@angular/router';
-
+import { Router, RouterLink } from '@angular/router';
 import { MatBadge } from '@angular/material/badge';
-
 import { MatDialog } from '@angular/material/dialog';
 
 import { EcommerceStore } from '../../ecommerce-store';
-
 import { CartStore } from '../../cart-store';
+import { AdminAuthService } from '../../services/admin-auth.service';
 
 @Component({
   selector: 'app-header-actions',
-
   standalone: true,
 
   imports: [
@@ -108,49 +106,60 @@ import { CartStore } from '../../cart-store';
     >
 
       <!-- WISHLIST -->
-
       <button
         matIconButton
         routerLink="/wishlist"
-        class="
-          wishlist-button
-          header-icon-button
-          shrink-0
-        "
+        class="wishlist-button header-icon-button shrink-0"
         [matBadge]="store.wishlistCount()"
         [matBadgeHidden]="store.wishlistCount() === 0"
       >
-        <mat-icon>
-          favorite
-        </mat-icon>
+        <mat-icon>favorite</mat-icon>
       </button>
 
-
       <!-- CARRINHO -->
-
       <button
         matIconButton
         routerLink="/cart"
-        class="
-          wishlist-button
-          header-icon-button
-          shrink-0
-        "
+        class="wishlist-button header-icon-button shrink-0"
         [matBadge]="cartStore.cartCount()"
         [matBadgeHidden]="cartStore.cartCount() === 0"
       >
-        <mat-icon>
-          shopping_cart
-        </mat-icon>
+        <mat-icon>shopping_cart</mat-icon>
       </button>
 
+      <!-- ADMINISTRADOR -->
+      @if (adminAuth.admin(); as admin) {
 
-      <!-- USUÁRIO LOGADO -->
+        <button
+          type="button"
+          class="
+            text-sm
+            font-semibold
+            text-purple-400
+            mx-1
+            lg:mx-2
+            max-w-[150px]
+            truncate
+            cursor-pointer
+            hover:text-purple-300
+          "
+          title="Ir para o painel administrativo"
+          (click)="router.navigate(['/admin'])"
+        >
+          {{ admin.name }}
+        </button>
 
-      @if (store.user(); as user) {
+        <button
+          matButton
+          class="header-action-button shrink-0"
+          (click)="logoutAdmin()"
+        >
+          Sair
+        </button>
 
-        <!-- NOME -->
+      } @else if (store.user(); as user) {
 
+        <!-- CLIENTE LOGADO -->
         <span
           class="
             inline
@@ -167,15 +176,9 @@ import { CartStore } from '../../cart-store';
           {{ user.name }}
         </span>
 
-
-        <!-- SAIR -->
-
         <button
           matButton
-          class="
-            header-action-button
-            shrink-0
-          "
+          class="header-action-button shrink-0"
           (click)="store.signOut()"
         >
           Sair
@@ -184,27 +187,18 @@ import { CartStore } from '../../cart-store';
       } @else {
 
         <!-- ENTRAR -->
-
         <button
           matButton
-          class="
-            header-action-button
-            shrink-0
-          "
+          class="header-action-button shrink-0"
           (click)="openAuth('signin')"
         >
           Entrar
         </button>
 
-
         <!-- CADASTRAR -->
-
         <button
           matButton="filled"
-          class="
-            header-action-button
-            shrink-0
-          "
+          class="header-action-button shrink-0"
           (click)="openAuth('signup')"
         >
           Cadastrar
@@ -214,20 +208,25 @@ import { CartStore } from '../../cart-store';
 
     </div>
   `,
-
 })
 export class HeaderActions {
 
   store = inject(EcommerceStore);
-
   cartStore = inject(CartStore);
 
+  adminAuth = inject(AdminAuthService);
+
   private dialog = inject(MatDialog);
+  router = inject(Router);
+  private platformId = inject(PLATFORM_ID);
 
+  constructor() {
+    if (isPlatformBrowser(this.platformId)) {
+      this.adminAuth.checkSession().subscribe();
+    }
+  }
 
-  async openAuth(
-    mode: 'signin' | 'signup'
-  ) {
+  async openAuth(mode: 'signin' | 'signup') {
 
     const { default: SignInDialog } =
       await import(
@@ -241,6 +240,14 @@ export class HeaderActions {
       },
     });
 
+  }
+
+  logoutAdmin() {
+    this.adminAuth.logout().subscribe({
+      next: () => {
+        this.router.navigate(['/products/Games']);
+      },
+    });
   }
 
 }

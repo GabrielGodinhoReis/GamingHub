@@ -1,4 +1,5 @@
-import { computed, inject } from '@angular/core';
+import { computed, inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 
 import { Router } from '@angular/router';
 
@@ -25,9 +26,7 @@ import { CartStore } from './cart-store';
 
 import { Toaster } from './services/toaster';
 
-// ---------------------------------------------------------
-// FIX PARA SSR (NODE.JS)
-// ---------------------------------------------------------
+import { ProductApiService } from './services/product-api';
 
 if (typeof globalThis.localStorage === 'undefined') {
   const mockStorage = new Map<string, string>();
@@ -65,6 +64,7 @@ export type RegisteredUser = {
 
 export type EcommerceState = {
   products: Product[];
+  featuredProductIds: string[];
   category: string;
   searchTerm: string;
   wishlistItems: Product[];
@@ -260,7 +260,7 @@ export const EcommerceStore = signalStore(
         price: 349.9,
         imageUrl: 'https://cdn2.steamgriddb.com/grid/a8f1d3b1cb35d3163c9cc2d0adff2d8f.jpg',
         bannerUrl:
-          'https://cdn1.epicgames.com/spt-assets/3e0c82e7863e40818a56f934edc55712/project-murray-1ad3k.png',
+          'https://cdn2.steamgriddb.com/grid/bef6594b48b1ab972264f3bec59ecda6.png',
         rating: 4.9,
         reviewCount: 210,
         inStock: true,
@@ -754,7 +754,7 @@ export const EcommerceStore = signalStore(
         imageUrl:
           'https://shared.steamstatic.com/store_item_assets/steam/apps/1771300/library_600x900_2x.jpg?t=1761038743',
         bannerUrl:
-          'https://cdn1.epicgames.com/spt-assets/a7641d724f1242db95f8f72fc0fd8d81/kingdom-come-deliverance-2-3b725.jpg',
+          'https://cdn2.steamgriddb.com/grid/8a9131b0e1dc14207a52d7cbe6a6a6ba.png',
         rating: 4.9,
         reviewCount: 720,
         inStock: true,
@@ -884,6 +884,8 @@ export const EcommerceStore = signalStore(
       },
     ] as Product[],
 
+    featuredProductIds: [],
+
     category: 'Games',
 
     searchTerm: '',
@@ -903,13 +905,13 @@ export const EcommerceStore = signalStore(
   // STORAGE
   // -------------------------------------------------------
 
-  withStorageSync({
+    withStorageSync({
     key: 'modern-store',
-
-    select: ({ wishlistItems, user, registeredUsers }) => ({
+    select: ({ wishlistItems, user, registeredUsers, featuredProductIds }) => ({
       wishlistItems,
       user,
       registeredUsers,
+      featuredProductIds,
     }),
   }),
 
@@ -917,7 +919,7 @@ export const EcommerceStore = signalStore(
   // COMPUTED
   // -------------------------------------------------------
 
-  withComputed(({ category, products, searchTerm, wishlistItems, selectedProductId }) => ({
+  withComputed(({ category, products, searchTerm, wishlistItems, selectedProductId, featuredProductIds }) => ({
     Categorias: computed(() => {
       const categorias = products().map((p) => p.category);
 
@@ -949,7 +951,11 @@ export const EcommerceStore = signalStore(
     // CAROUSEL
     // -----------------------------------------------
 
-    carouselProducts: computed(() => products().filter((p) => p.bannerUrl)),
+    carouselProducts: computed(() =>
+      products().filter(
+        (p) => p.bannerUrl && featuredProductIds().includes(p.id)
+      )
+    ),
 
     // -----------------------------------------------
     // WISHLIST
@@ -977,7 +983,88 @@ export const EcommerceStore = signalStore(
 
     const toaster = inject(Toaster);
 
+    const productApi = inject(ProductApiService);
+
+    const platformId = inject(PLATFORM_ID);
+
+    let apiProductsLoading = false;
+
     return {
+
+      // -----------------------------------------------
+      // DESTAQUES DA VITRINE
+      // -----------------------------------------------
+
+      toggleFeatured: (product: Product) => {
+        // Não permite destacar produtos sem banner.
+        if (!product.bannerUrl) {
+          toaster.error('Esse jogo não possui banner!');
+          return;
+        }
+
+        const isFeatured = store.featuredProductIds().includes(product.id);
+
+        patchState(store, {
+          featuredProductIds: isFeatured
+            ? store.featuredProductIds().filter((id) => id !== product.id)
+            : [...store.featuredProductIds(), product.id],
+        });
+
+        toaster.sucess(
+          isFeatured
+            ? 'Jogo removido da vitrine!'
+            : 'Jogo adicionado à vitrine!'
+        );
+      },
+
+      // -----------------------------------------------
+      // PRODUTOS DO BACKEND
+      // -----------------------------------------------
+
+      loadApiProducts: () => {
+        // Evita chamadas durante a renderização no servidor
+        if (!isPlatformBrowser(platformId)) {
+          return;
+        }
+
+        // Evita requisições duplicadas
+        if (apiProductsLoading) {
+          return;
+        }
+
+        apiProductsLoading = true;
+
+        productApi.listarProdutos().subscribe({
+          next: (apiProducts) => {
+          // Mantém os produtos atuais, incluindo os 60 jogos fixos.
+          const productsById = new Map(
+            store.products().map((product) => [product.id, product])
+          );
+
+          // Adiciona os produtos do backend e atualiza os que já existem.
+          for (const product of apiProducts) {
+            productsById.set(product.id, product);
+          }
+
+          patchState(store, {
+            products: Array.from(productsById.values()),
+          });
+
+          apiProductsLoading = false;
+
+          console.log(
+            `${apiProducts.length} produto(s) sincronizado(s) com o backend.`
+          );
+        },
+
+          error: (error) => {
+            console.error('Erro ao carregar produtos do backend:', error);
+
+            apiProductsLoading = false;
+          },
+        });
+      },
+
       // -----------------------------------------------
       // CATEGORIA
       // -----------------------------------------------
@@ -1212,3 +1299,5 @@ export const EcommerceStore = signalStore(
     };
   }),
 );
+export type { Product };
+

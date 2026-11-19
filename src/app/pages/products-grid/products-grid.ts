@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, effect } from '@angular/core';
 
 import { ProductCard } from '../../components/product-card/product-card';
 
@@ -308,6 +308,9 @@ export default class ProductsGrid {
   }
 
   constructor() {
+    // Carrega os produtos cadastrados no backend
+    this.store.loadApiProducts();
+
     this.route.paramMap.subscribe((params) => {
       const categoria = params.get('category');
 
@@ -316,38 +319,47 @@ export default class ProductsGrid {
       }
     });
 
-    this.loadCarousel();
+    // Atualiza o carrossel sempre que os produtos mudarem.
+    effect(() => {
+      const games = this.store.carouselProducts();
+
+      this.loadCarousel(games);
+    });
 
     this.startAutoPlay();
   }
 
-  loadCarousel() {
-    const games = this.store.carouselProducts();
-
-    if (games.length === 0) {
-      return;
-    }
-
-    const order = games.map((_, index) => index);
-
-    order.sort(() => Math.random() - 0.5);
-
-    this.carouselOrder.set(order);
-
+  loadCarousel(games = this.store.carouselProducts()): void {
+  if (games.length === 0) {
+    this.carouselOrder.set([]);
     this.carouselIndex.set(0);
-
-    const firstGame = games[order[0]];
-
-    const secondGame = games[order.length > 1 ? order[1] : order[0]];
-
-    this.currentImage.set(firstGame.bannerUrl);
-
-    this.nextImage.set(secondGame.bannerUrl);
-
-    this.currentImageVisible.set(true);
-
-    this.nextImageVisible.set(false);
+    this.currentImage.set('');
+    this.nextImage.set('');
+    return;
   }
+
+  const order = games.map((_, index) => index);
+
+  // Embaralha sem repetir
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+
+  this.carouselOrder.set(order);
+  this.carouselIndex.set(0);
+
+  const firstGame = games[order[0]];
+  const secondGame = games[order.length > 1 ? order[1] : order[0]];
+
+  this.currentImage.set(firstGame.bannerUrl);
+  this.nextImage.set(secondGame.bannerUrl);
+
+  this.currentImageVisible.set(true);
+  this.nextImageVisible.set(false);
+
+  this.startAutoPlay();
+}
 
   get currentGameData() {
     const games = this.store.carouselProducts();

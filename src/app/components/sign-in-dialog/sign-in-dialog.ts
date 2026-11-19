@@ -1,5 +1,9 @@
+
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
+import { catchError, of } from 'rxjs';
+
 import { MatButtonModule } from '@angular/material/button';
 import {
   MAT_DIALOG_DATA,
@@ -9,7 +13,9 @@ import {
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+
 import { EcommerceStore } from '../../ecommerce-store';
+import { AdminAuthService } from '../../services/admin-auth.service';
 
 @Component({
   selector: 'app-sign-in-dialog',
@@ -58,7 +64,6 @@ import { EcommerceStore } from '../../ecommerce-store';
         (ngSubmit)="onSubmit()"
         class="flex flex-col gap-3 mt-2"
       >
-        <!-- Nome Completo (Apenas no Cadastro) -->
         @if (mode() === 'signup') {
           <mat-form-field appearance="outline" class="w-full">
             <mat-label>Nome Completo</mat-label>
@@ -75,7 +80,6 @@ import { EcommerceStore } from '../../ecommerce-store';
           </mat-form-field>
         }
 
-        <!-- E-mail (Exibido em todas as telas) -->
         <mat-form-field appearance="outline" class="w-full">
           <mat-label>E-mail</mat-label>
 
@@ -91,7 +95,6 @@ import { EcommerceStore } from '../../ecommerce-store';
           </mat-icon>
         </mat-form-field>
 
-        <!-- Senha (Exibido no Login e Cadastro) -->
         @if (mode() !== 'forgot') {
           <mat-form-field appearance="outline" class="w-full">
             <mat-label>Senha</mat-label>
@@ -119,7 +122,6 @@ import { EcommerceStore } from '../../ecommerce-store';
           </mat-form-field>
         }
 
-        <!-- Link 'Esqueceu a senha?' (Apenas no Login) -->
         @if (mode() === 'signin') {
           <div class="text-right -mt-2 mb-1">
             <button
@@ -132,7 +134,6 @@ import { EcommerceStore } from '../../ecommerce-store';
           </div>
         }
 
-        <!-- Confirmar Senha (Apenas no Cadastro) -->
         @if (mode() === 'signup') {
           <mat-form-field appearance="outline" class="w-full">
             <mat-label>Confirmar Senha</mat-label>
@@ -163,7 +164,6 @@ import { EcommerceStore } from '../../ecommerce-store';
         </button>
       </form>
 
-      <!-- Rodapé para alternar entre as telas -->
       <div class="mt-4 text-center text-sm text-gray-400">
         @if (mode() === 'signup') {
           Já tem uma conta?
@@ -203,6 +203,8 @@ import { EcommerceStore } from '../../ecommerce-store';
 export default class SignInDialog {
   private fb = inject(FormBuilder).nonNullable;
   private store = inject(EcommerceStore);
+  private adminAuth = inject(AdminAuthService);
+  private router = inject(Router);
   private dialogRef = inject(MatDialogRef<SignInDialog>);
 
   data = inject<{
@@ -210,7 +212,9 @@ export default class SignInDialog {
     mode?: 'signin' | 'signup' | 'forgot';
   }>(MAT_DIALOG_DATA, { optional: true });
 
-  mode = signal<'signin' | 'signup' | 'forgot'>(this.data?.mode || 'signin');
+  mode = signal<'signin' | 'signup' | 'forgot'>(
+    this.data?.mode || 'signin'
+  );
 
   passwordVisible = signal(false);
 
@@ -231,19 +235,19 @@ export default class SignInDialog {
   }
 
   onSubmit() {
-    
     if (this.mode() === 'forgot') {
       const email = this.authForm.get('email')?.value;
+
       if (!email || this.authForm.get('email')?.invalid) {
         alert('Por favor, informe um e-mail válido!');
         return;
       }
+
       alert('Instruções de recuperação enviadas para o seu e-mail!');
       this.setMode('signin');
       return;
     }
 
-    // 2. Fluxo de Cadastro
     if (this.mode() === 'signup') {
       const val = this.authForm.getRawValue();
 
@@ -266,18 +270,34 @@ export default class SignInDialog {
           dialogId: this.dialogRef.id,
         });
       }
-    } else {
-      // 3. Fluxo de Login
-      const val = this.authForm.getRawValue();
 
-      if (this.authForm.get('email')?.valid && val.password) {
+      return;
+    }
+
+    // Primeiro verifica se as credenciais são do administrador.
+    const val = this.authForm.getRawValue();
+
+    if (!this.authForm.get('email')?.valid || !val.password) {
+      return;
+    }
+
+    this.adminAuth
+      .login(val.email, val.password)
+      .pipe(catchError(() => of(null)))
+      .subscribe((admin) => {
+        if (admin?.role === 'ADMIN') {
+          this.dialogRef.close();
+          this.router.navigateByUrl('/admin');
+          return;
+        }
+
+        // Se não for administrador, mantém o login normal de cliente.
         this.store.signIn({
           email: val.email,
           password: val.password,
           checkout: this.data?.checkout,
           dialogId: this.dialogRef.id,
         });
-      }
-    }
+      });
   }
 }

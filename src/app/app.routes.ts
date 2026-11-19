@@ -1,4 +1,6 @@
+
 import { Routes } from '@angular/router';
+import { adminGuard } from './guards/admin.guard';
 
 export const routes: Routes = [
   {
@@ -7,12 +9,19 @@ export const routes: Routes = [
     pathMatch: 'full',
   },
   {
+    path: 'admin',
+    canActivate: [adminGuard],
+    loadComponent: () =>
+      import('./pages/admin-dashboard/admin-dashboard')
+        .then(m => m.AdminDashboardComponent),
+  },
+  {
     path: 'products/:category',
     loadComponent: () => import('./pages/products-grid/products-grid'),
   },
   {
     path: 'product/:productId',
-    loadComponent: () => import('./pages/view-product-detail/view-product-detail')
+    loadComponent: () => import('./pages/view-product-detail/view-product-detail'),
   },
   {
     path: 'wishlist',
