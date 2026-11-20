@@ -177,6 +177,15 @@ import { AdminAuthService } from '../../services/admin-auth.service';
         </span>
 
         <button
+          matIconButton
+          routerLink="/account"
+          class="header-icon-button shrink-0"
+          title="Minha conta"
+        >
+          <mat-icon>manage_accounts</mat-icon>
+        </button>
+
+        <button
           matButton
           class="header-action-button shrink-0"
           (click)="store.signOut()"
