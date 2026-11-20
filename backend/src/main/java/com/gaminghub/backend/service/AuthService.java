@@ -11,9 +11,7 @@ public class AuthService {
         String adminPassword = System.getenv("ADMIN_PASSWORD");
 
         if (adminEmail == null || adminPassword == null) {
-            throw new IllegalStateException(
-                "As credenciais do administrador não foram configuradas."
-            );
+            return false;
         }
 
         return adminEmail.equals(email)

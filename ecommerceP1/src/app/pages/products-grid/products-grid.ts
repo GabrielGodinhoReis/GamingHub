@@ -177,13 +177,7 @@ import { ToggleWishlistButton } from '../../components/toggle-wishlist-button/to
             @for (product of store.filteredProducts(); track product.id) {
               <app-product-card [product]="product">
                 <app-toggle-wishlist-button
-                  !absolute
-                  !z-10
-                  !top-3
-                  !right-3
-                  !w-10
-                  !h-10
-                  !rounded-full
+                  class="!absolute !z-10 !top-3 !right-3 !w-10 !h-10 !rounded-full"
                   [product]="product"
                   [style.view-transition-name]="'wishlist-button-' + product.id"
                 />

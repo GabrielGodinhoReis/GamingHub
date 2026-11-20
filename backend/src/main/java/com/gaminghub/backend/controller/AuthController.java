@@ -56,6 +56,9 @@ public class AuthController {
                 .body("E-mail ou senha incorretos.");
         }
 
+        var anterior = httpRequest.getSession(false);
+        if (anterior != null) anterior.invalidate();
+
         Authentication authentication =
             new UsernamePasswordAuthenticationToken(
                 request.email(),
