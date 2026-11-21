@@ -160,9 +160,9 @@ import { AdminAuthService } from '../../services/admin-auth.service';
       } @else if (store.user(); as user) {
 
         <!-- CLIENTE LOGADO -->
-        <span
+        <button
+          type="button"
           class="
-            inline
             text-sm
             font-semibold
             text-white
@@ -170,19 +170,14 @@ import { AdminAuthService } from '../../services/admin-auth.service';
             lg:mx-2
             max-w-[150px]
             truncate
+            cursor-pointer
+            hover:text-purple-400
+            transition-colors
           "
-          [title]="user.name"
+          title="Acessar meu perfil"
+          (click)="router.navigate(['/account'])"
         >
           {{ user.name }}
-        </span>
-
-        <button
-          matIconButton
-          routerLink="/account"
-          class="header-icon-button shrink-0"
-          title="Minha conta"
-        >
-          <mat-icon>manage_accounts</mat-icon>
         </button>
 
         <button

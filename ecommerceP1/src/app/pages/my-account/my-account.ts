@@ -1,3 +1,4 @@
+
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -22,124 +23,269 @@ import { Toaster } from '../../services/toaster';
     MatInputModule,
   ],
   template: `
-    <div class="max-w-[700px] mx-auto p-4 sm:p-6 pb-24 text-white space-y-6">
-      <a routerLink="/products/Games" mat-button class="!text-gray-300">
-        <mat-icon>arrow_back</mat-icon>
-        Voltar à Loja
-      </a>
+    <div class="min-h-screen bg-[#0f1117] text-white px-4 py-8 sm:px-6">
+      <div class="max-w-3xl mx-auto space-y-8">
 
-      <h1 class="text-2xl sm:text-3xl font-bold">Minha Conta</h1>
-
-      @if (store.user()) {
-        <!-- DADOS PESSOAIS -->
-        <form
-          [formGroup]="dataForm"
-          (ngSubmit)="saveData()"
-          class="p-4 sm:p-6 bg-gray-900 rounded-xl border border-gray-800 space-y-3"
-        >
-          <h2 class="text-lg font-bold border-b border-gray-800 pb-3">Dados pessoais</h2>
-
-          <mat-form-field appearance="outline" class="w-full">
-            <mat-label>Nome</mat-label>
-            <input matInput formControlName="nome" />
-          </mat-form-field>
-
-          <mat-form-field appearance="outline" class="w-full">
-            <mat-label>E-mail</mat-label>
-            <input matInput type="email" formControlName="email" />
-          </mat-form-field>
-
-          <mat-form-field appearance="outline" class="w-full">
-            <mat-label>CPF</mat-label>
-            <input matInput formControlName="documento" maxlength="14" inputmode="numeric" />
-            <mat-hint class="!text-gray-400">
-              A API exige o CPF para salvar alterações.
-            </mat-hint>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline" class="w-full">
-            <mat-label>Senha atual</mat-label>
-            <input matInput type="password" formControlName="senha" />
-            <mat-hint class="!text-gray-400">Confirme sua senha para salvar.</mat-hint>
-          </mat-form-field>
-
-          <button
-            type="submit"
-            [disabled]="saving()"
-            class="w-full mt-4 py-3 rounded-lg border-0 bg-[#8b5cf6] text-white font-semibold hover:bg-purple-700 transition cursor-pointer disabled:opacity-60"
+        <!-- CABEÇALHO -->
+        <header class="space-y-5">
+          <a
+            routerLink="/products/Games"
+            class="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-purple-400 transition-colors"
           >
-            Salvar alterações
-          </button>
-        </form>
+            <mat-icon class="!w-5 !h-5 !text-xl">arrow_back</mat-icon>
+            Voltar à loja
+          </a>
 
-        <!-- ALTERAR SENHA -->
-        <form
-          [formGroup]="passwordForm"
-          (ngSubmit)="changePassword()"
-          class="p-4 sm:p-6 bg-gray-900 rounded-xl border border-gray-800 space-y-3"
-        >
-          <h2 class="text-lg font-bold border-b border-gray-800 pb-3">Alterar senha</h2>
+          <div>
+            <p class="text-sm font-semibold text-purple-400 uppercase tracking-widest">
+              Gaming Hub
+            </p>
 
-          <mat-form-field appearance="outline" class="w-full">
-            <mat-label>CPF (confirmação)</mat-label>
-            <input matInput formControlName="documento" maxlength="14" inputmode="numeric" />
-          </mat-form-field>
+            <h1 class="text-3xl sm:text-4xl font-bold mt-2">
+              Minha conta
+            </h1>
 
-          <mat-form-field appearance="outline" class="w-full">
-            <mat-label>Nova senha</mat-label>
-            <input matInput type="password" formControlName="novaSenha" />
-          </mat-form-field>
+            <p class="text-gray-400 mt-2">
+              Gerencie suas informações pessoais e configurações de segurança.
+            </p>
+          </div>
+        </header>
 
-          <mat-form-field appearance="outline" class="w-full">
-            <mat-label>Confirmar nova senha</mat-label>
-            <input matInput type="password" formControlName="confirmar" />
-          </mat-form-field>
+        @if (store.user()) {
 
-          <button
-            type="submit"
-            [disabled]="saving()"
-            class="w-full mt-2 py-3 rounded-lg border-0 bg-gray-700 text-white font-semibold hover:bg-[#8b5cf6] transition cursor-pointer disabled:opacity-60"
-          >
-            Alterar senha
-          </button>
-        </form>
+          <!-- DADOS PESSOAIS -->
+          <section class="bg-[#0f1117] border border-gray-700 rounded-xl p-5 sm:p-7 space-y-6">
 
-        <!-- EXCLUIR CONTA -->
-        <div class="p-4 sm:p-6 bg-gray-900 rounded-xl border border-red-900/60 space-y-3">
-          <h2 class="text-lg font-bold text-red-400">Excluir conta</h2>
-          <p class="text-sm text-gray-400">Essa ação remove sua conta e não pode ser desfeita.</p>
+            <div class="flex items-center gap-3 border-b border-gray-700 pb-5">
+              <div class="w-10 h-10 rounded-md bg-purple-600 flex items-center justify-center">
+                <mat-icon class="!text-white">person</mat-icon>
+              </div>
 
-          @if (!confirmDelete()) {
-            <button
-              type="button"
-              (click)="confirmDelete.set(true)"
-              class="px-5 py-2 rounded-lg border border-red-500 bg-transparent text-red-400 font-semibold hover:bg-red-500/10 transition cursor-pointer"
-            >
-              Excluir minha conta
-            </button>
-          } @else {
-            <div class="flex gap-3">
-              <button
-                type="button"
-                (click)="deleteAccount()"
-                [disabled]="saving()"
-                class="px-5 py-2 rounded-lg border-0 bg-red-600 text-white font-semibold hover:bg-red-700 transition cursor-pointer"
-              >
-                Sim, excluir
-              </button>
-              <button
-                type="button"
-                (click)="confirmDelete.set(false)"
-                class="px-5 py-2 rounded-lg border border-gray-600 bg-transparent text-gray-300 cursor-pointer"
-              >
-                Cancelar
-              </button>
+              <div>
+                <h2 class="text-xl font-bold">Dados pessoais</h2>
+                <p class="text-sm text-gray-400">
+                  Atualize as informações da sua conta.
+                </p>
+              </div>
             </div>
-          }
-        </div>
-      } @else {
-        <p class="text-gray-400">Faça login para acessar sua conta.</p>
-      }
+
+            <form
+              [formGroup]="dataForm"
+              (ngSubmit)="saveData()"
+              class="space-y-4"
+            >
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+                <mat-form-field appearance="outline" class="w-full">
+                  <mat-label>Nome completo</mat-label>
+                  <input matInput formControlName="nome" />
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="w-full">
+                  <mat-label>E-mail</mat-label>
+                  <input matInput type="email" formControlName="email" />
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="w-full">
+                  <mat-label>CPF</mat-label>
+                  <input
+                    matInput
+                    formControlName="documento"
+                    maxlength="14"
+                    inputmode="numeric"
+                  />
+                  <mat-hint class="!text-gray-400">
+                    Necessário para salvar alterações.
+                  </mat-hint>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="w-full">
+                  <mat-label>Senha atual</mat-label>
+                  <input
+                    matInput
+                    type="password"
+                    formControlName="senha"
+                  />
+                  <mat-hint class="!text-gray-400">
+                    Confirme sua senha.
+                  </mat-hint>
+                </mat-form-field>
+
+              </div>
+
+              <div class="flex justify-end pt-2">
+                <button
+                  type="submit"
+                  [disabled]="saving()"
+                  class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-purple-600 text-white font-medium hover:bg-purple-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <mat-icon>save</mat-icon>
+                  Salvar alterações
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <!-- ALTERAR SENHA -->
+          <section class="bg-[#0f1117] border border-gray-700 rounded-xl p-5 sm:p-7 space-y-6">
+
+            <div class="flex items-center gap-3 border-b border-gray-700 pb-5">
+              <div class="w-10 h-10 rounded-md bg-purple-600 flex items-center justify-center">
+                <mat-icon class="!text-white">lock</mat-icon>
+              </div>
+
+              <div>
+                <h2 class="text-xl font-bold">Segurança</h2>
+                <p class="text-sm text-gray-400">
+                  Altere a senha de acesso à sua conta.
+                </p>
+              </div>
+            </div>
+
+            <form
+              [formGroup]="passwordForm"
+              (ngSubmit)="changePassword()"
+              class="space-y-4"
+            >
+              <mat-form-field appearance="outline" class="w-full">
+                <mat-label>CPF</mat-label>
+                <input
+                  matInput
+                  formControlName="documento"
+                  maxlength="14"
+                  inputmode="numeric"
+                />
+              </mat-form-field>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+                <mat-form-field appearance="outline" class="w-full">
+                  <mat-label>Nova senha</mat-label>
+                  <input
+                    matInput
+                    type="password"
+                    formControlName="novaSenha"
+                  />
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="w-full">
+                  <mat-label>Confirmar nova senha</mat-label>
+                  <input
+                    matInput
+                    type="password"
+                    formControlName="confirmar"
+                  />
+                </mat-form-field>
+
+              </div>
+
+              <div class="flex justify-end pt-2">
+                <button
+                  type="submit"
+                  [disabled]="saving()"
+                  class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-purple-600 text-white font-medium hover:bg-purple-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <mat-icon>lock_reset</mat-icon>
+                  Alterar senha
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <!-- EXCLUIR CONTA -->
+          <section class="bg-[#0f1117] border border-gray-700 rounded-xl p-5 sm:p-7 space-y-5">
+
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-md bg-purple-600 flex items-center justify-center">
+                <mat-icon class="!text-white">warning</mat-icon>
+              </div>
+
+              <div>
+                <h2 class="text-xl font-bold">Excluir conta</h2>
+                <p class="text-sm text-gray-400">
+                  Exclusão permanente da sua conta.
+                </p>
+              </div>
+            </div>
+
+            <div class="border-t border-gray-700 pt-5 space-y-4">
+
+              <p class="text-sm text-gray-400 leading-relaxed">
+                Ao excluir sua conta, seus dados serão removidos.
+                Essa ação não poderá ser desfeita.
+              </p>
+
+              @if (!confirmDelete()) {
+                <button
+                  type="button"
+                  (click)="confirmDelete.set(true)"
+                  class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-purple-600 text-white font-medium hover:bg-purple-700 transition-colors cursor-pointer"
+                >
+                  <mat-icon>delete_outline</mat-icon>
+                  Excluir minha conta
+                </button>
+              } @else {
+
+                <div class="space-y-4">
+
+                  <p class="text-sm text-gray-300 font-medium">
+                    Tem certeza de que deseja excluir sua conta?
+                  </p>
+
+                  <div class="flex flex-col sm:flex-row gap-3">
+
+                    <button
+                      type="button"
+                      (click)="deleteAccount()"
+                      [disabled]="saving()"
+                      class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-purple-600 text-white font-medium hover:bg-purple-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <mat-icon>delete</mat-icon>
+                      Sim, excluir conta
+                    </button>
+
+                    <button
+                      type="button"
+                      (click)="confirmDelete.set(false)"
+                      class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-purple-600 text-white font-medium hover:bg-purple-700 transition-colors cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+
+                  </div>
+                </div>
+              }
+            </div>
+          </section>
+
+        } @else {
+
+          <!-- USUÁRIO NÃO LOGADO -->
+          <div class="bg-[#0f1117] border border-gray-700 rounded-xl p-8 text-center space-y-4">
+
+            <mat-icon class="!text-5xl !w-12 !h-12 !text-gray-400">
+              account_circle
+            </mat-icon>
+
+            <h2 class="text-xl font-bold">
+              Você não está conectado
+            </h2>
+
+            <p class="text-gray-400">
+              Faça login para acessar as informações da sua conta.
+            </p>
+
+            <a
+              routerLink="/products/Games"
+              class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-purple-600 text-white font-medium hover:bg-purple-700 transition-colors"
+            >
+              Voltar à loja
+            </a>
+
+          </div>
+        }
+
+      </div>
     </div>
   `,
 })
@@ -199,7 +345,12 @@ export default class MyAccount {
             return;
           }
 
-          this.store.updateUser({ ...user, name: v.nome.trim(), email: v.email.trim() });
+          this.store.updateUser({
+            ...user,
+            name: v.nome.trim(),
+            email: v.email.trim(),
+          });
+
           this.dataForm.patchValue({ senha: '' });
           this.toaster.sucess('Dados atualizados com sucesso!');
         },
@@ -226,7 +377,11 @@ export default class MyAccount {
 
     this.saving.set(true);
 
-    this.api.alterarSenha(user.email, this.onlyDigits(v.documento), v.novaSenha).subscribe({
+    this.api.alterarSenha(
+      user.email,
+      this.onlyDigits(v.documento),
+      v.novaSenha
+    ).subscribe({
       next: () => {
         this.saving.set(false);
         this.passwordForm.reset();
