@@ -16,6 +16,8 @@ import { MatInputModule } from '@angular/material/input';
 
 import { EcommerceStore } from '../../ecommerce-store';
 import { AdminAuthService } from '../../services/admin-auth.service';
+import { ClienteApiService } from '../../services/cliente-api';
+import { Toaster } from '../../services/toaster';
 
 @Component({
   selector: 'app-sign-in-dialog',
@@ -94,6 +96,24 @@ import { AdminAuthService } from '../../services/admin-auth.service';
             email
           </mat-icon>
         </mat-form-field>
+
+        @if (mode() === 'signup') {
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>CPF</mat-label>
+
+            <input
+              matInput
+              formControlName="documento"
+              inputmode="numeric"
+              maxlength="14"
+              placeholder="000.000.000-00"
+            />
+
+            <mat-icon matPrefix class="mr-2 text-gray-400">
+              badge
+            </mat-icon>
+          </mat-form-field>
+        }
 
         @if (mode() !== 'forgot') {
           <mat-form-field appearance="outline" class="w-full">
@@ -205,6 +225,8 @@ export default class SignInDialog {
   private store = inject(EcommerceStore);
   private adminAuth = inject(AdminAuthService);
   private router = inject(Router);
+  private clienteApi = inject(ClienteApiService);
+  private toaster = inject(Toaster);
   private dialogRef = inject(MatDialogRef<SignInDialog>);
 
   data = inject<{
@@ -220,8 +242,9 @@ export default class SignInDialog {
 
   authForm = this.fb.group({
     name: [''],
+    documento: [''],
     email: ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.required, Validators.minLength(3)]],
+    password: ['', [Validators.minLength(3)]],
     confirmPassword: [''],
   });
 
@@ -243,8 +266,15 @@ export default class SignInDialog {
         return;
       }
 
-      alert('Instruções de recuperação enviadas para o seu e-mail!');
-      this.setMode('signin');
+      this.clienteApi.resetarSenha(email.trim()).subscribe({
+        next: () => {
+          this.toaster.sucess(
+            'Sua senha foi reiniciada! Use a senha padrão Senha1234 e troque-a depois em "Minha conta".'
+          );
+          this.setMode('signin');
+        },
+        error: () => this.toaster.error('Não foi possível resetar a senha. Tente novamente.'),
+      });
       return;
     }
 
@@ -261,11 +291,24 @@ export default class SignInDialog {
         return;
       }
 
+      const cpf = (val.documento ?? '').replace(/\D/g, '');
+
+      if (cpf.length !== 11) {
+        alert('Informe um CPF válido (11 dígitos)!');
+        return;
+      }
+
+      if (!val.password || val.password.length < 3) {
+        alert('A senha precisa ter pelo menos 3 caracteres!');
+        return;
+      }
+
       if (this.authForm.get('email')?.valid && val.password) {
         this.store.signUp({
           name: val.name,
           email: val.email,
           password: val.password,
+          documento: cpf,
           checkout: this.data?.checkout,
           dialogId: this.dialogRef.id,
         });
@@ -286,6 +329,7 @@ export default class SignInDialog {
       .pipe(catchError(() => of(null)))
       .subscribe((admin) => {
         if (admin?.role === 'ADMIN') {
+          this.store.clearUser();
           this.dialogRef.close();
           this.router.navigateByUrl('/admin');
           return;

@@ -11,6 +11,7 @@ import {
   signalStore,
   withComputed,
   withMethods,
+  withHooks,
   withState,
 } from '@ngrx/signals';
 
@@ -27,6 +28,8 @@ import { CartStore } from './cart-store';
 import { Toaster } from './services/toaster';
 
 import { ProductApiService } from './services/product-api';
+
+import { ClienteApiService } from './services/cliente-api';
 
 if (typeof globalThis.localStorage === 'undefined') {
   const mockStorage = new Map<string, string>();
@@ -48,17 +51,6 @@ if (typeof globalThis.localStorage === 'undefined') {
   };
 }
 
-// ---------------------------------------------------------
-// USUÁRIO CADASTRADO
-// ---------------------------------------------------------
-
-export type RegisteredUser = {
-  name: string;
-  email: string;
-  password?: string;
-};
-
-// ---------------------------------------------------------
 // ESTADO
 // ---------------------------------------------------------
 
@@ -69,7 +61,6 @@ export type EcommerceState = {
   searchTerm: string;
   wishlistItems: Product[];
   user: User | undefined;
-  registeredUsers: RegisteredUser[];
   loading: boolean;
   selectedProductId: string | undefined;
 };
@@ -894,8 +885,6 @@ export const EcommerceStore = signalStore(
 
     user: undefined as User | undefined,
 
-    registeredUsers: [] as RegisteredUser[],
-
     loading: false,
 
     selectedProductId: undefined,
@@ -905,12 +894,11 @@ export const EcommerceStore = signalStore(
   // STORAGE
   // -------------------------------------------------------
 
-    withStorageSync({
+  withStorageSync({
     key: 'modern-store',
-    select: ({ wishlistItems, user, registeredUsers, featuredProductIds }) => ({
+    select: ({ wishlistItems, user, featuredProductIds }) => ({
       wishlistItems,
       user,
-      registeredUsers,
       featuredProductIds,
     }),
   }),
@@ -984,6 +972,8 @@ export const EcommerceStore = signalStore(
     const toaster = inject(Toaster);
 
     const productApi = inject(ProductApiService);
+
+    const clienteApi = inject(ClienteApiService);
 
     const platformId = inject(PLATFORM_ID);
 
@@ -1145,96 +1135,111 @@ export const EcommerceStore = signalStore(
       // LOGIN
       // -----------------------------------------------
 
-      signIn(params: SignInParams): boolean {
-        const emailInput = params.email.trim().toLowerCase();
+      signIn(params: SignInParams): Promise<boolean> {
+        return new Promise((resolve) => {
+          clienteApi.login(params.email.trim(), params.password ?? '').subscribe({
+            next: (cliente) => {
+              if (!cliente) {
+                toaster.error('E-mail ou senha incorretos!');
+                resolve(false);
+                return;
+              }
 
-        const found = store.registeredUsers().find((u) => u.email.toLowerCase() === emailInput);
+              const user: User = {
+                id: String(cliente.codigo),
+                codigo: cliente.codigo,
+                name: cliente.nome ?? '',
+                email: cliente.email ?? params.email,
+              };
 
-        if (!found) {
-          toaster.error('E-mail não cadastrado! Clique em Cadastrar para criar sua conta.');
+              patchState(store, { user });
 
-          return false;
-        }
+              toaster.sucess(`Bem-vindo(a) de volta, ${user.name}!`);
 
-        if (found.password && params.password && found.password !== params.password) {
-          toaster.error('Senha incorreta! Verifique os dados digitados.');
+              if (params.dialogId) {
+                dialog.getDialogById(params.dialogId)?.close();
+              }
 
-          return false;
-        }
+              if (params.checkout) {
+                router.navigate(['/checkout']);
+              }
 
-        const user: User = {
-          id: found.email,
-          name: found.name,
-          email: found.email,
-        };
-
-        patchState(store, {
-          user,
+              resolve(true);
+            },
+            error: () => {
+              toaster.error('Não foi possível conectar ao servidor. Tente novamente.');
+              resolve(false);
+            },
+          });
         });
-
-        toaster.sucess(`Bem-vindo(a) de volta, ${found.name}!`);
-
-        if (params.dialogId) {
-          const dialogRef = dialog.getDialogById(params.dialogId);
-
-          dialogRef?.close();
-        }
-
-        if (params.checkout) {
-          router.navigate(['/checkout']);
-        }
-
-        return true;
       },
 
       // -----------------------------------------------
       // CADASTRO
       // -----------------------------------------------
 
-      signUp(params: SignUpParams): boolean {
-        const emailInput = params.email.trim().toLowerCase();
+      signUp(params: SignUpParams): Promise<boolean> {
+        return new Promise((resolve) => {
+          const email = params.email.trim().toLowerCase();
 
-        const exists = store.registeredUsers().some((u) => u.email.toLowerCase() === emailInput);
+          clienteApi
+            .cadastrar({
+              nome: params.name.trim(),
+              email,
+              senha: params.password ?? '',
+              documento: (params.documento ?? '').replace(/\D/g, ''),
+            })
+            .subscribe({
+              next: () => {
+                toaster.sucess('Conta criada com sucesso!');
 
-        if (exists) {
-          toaster.error('Este e-mail já está cadastrado! Faça login.');
+                // A API de cadastro não devolve o cliente; faz login em seguida.
+                clienteApi.login(email, params.password ?? '').subscribe({
+                  next: (cliente) => {
+                    if (!cliente) {
+                      toaster.error('Conta criada. Entre com seu e-mail e senha.');
+                      resolve(false);
+                      return;
+                    }
+                    patchState(store, {
+                      user: {
+                        id: String(cliente.codigo),
+                        codigo: cliente.codigo,
+                        name: cliente.nome ?? params.name,
+                        email: cliente.email ?? email,
+                      },
+                    });
 
-          return false;
-        }
+                    if (params.dialogId) {
+                      dialog.getDialogById(params.dialogId)?.close();
+                    }
 
-        const newUser: RegisteredUser = {
-          name: params.name,
-          email: emailInput,
-          password: params.password,
-        };
+                    if (params.checkout) {
+                      router.navigate(['/checkout']);
+                    }
 
-        const updatedUsers = [...store.registeredUsers(), newUser];
-
-        const user: User = {
-          id: newUser.email,
-          name: newUser.name,
-          email: newUser.email,
-        };
-
-        patchState(store, {
-          registeredUsers: updatedUsers,
-
-          user,
+                    resolve(true);
+                  },
+                  error: () => {
+                    toaster.error('Conta criada. Entre com seu e-mail e senha.');
+                    resolve(false);
+                  },
+                });
+              },
+              error: () => {
+                toaster.error('Não foi possível cadastrar. Verifique os dados e tente novamente.');
+                resolve(false);
+              },
+            });
         });
+      },
 
-        toaster.sucess('Conta criada com sucesso!');
+      // -----------------------------------------------
+      // ATUALIZAR USUÁRIO LOCAL (após editar a conta)
+      // -----------------------------------------------
 
-        if (params.dialogId) {
-          const dialogRef = dialog.getDialogById(params.dialogId);
-
-          dialogRef?.close();
-        }
-
-        if (params.checkout) {
-          router.navigate(['/checkout']);
-        }
-
-        return true;
+      updateUser(user: User) {
+        patchState(store, { user });
       },
 
       // -----------------------------------------------
@@ -1242,11 +1247,17 @@ export const EcommerceStore = signalStore(
       // -----------------------------------------------
 
       signOut() {
-        patchState(store, {
-          user: undefined,
+        clienteApi.logout().subscribe({
+          next: () => {
+            patchState(store, { user: undefined });
+            toaster.sucess('Sessão encerrada!');
+          },
+          error: () => toaster.error('Erro ao sair. Tente novamente.'),
         });
+      },
 
-        toaster.sucess('Sessão encerrada!');
+      clearUser() {
+        patchState(store, { user: undefined });
       },
 
       // -----------------------------------------------
@@ -1297,6 +1308,28 @@ export const EcommerceStore = signalStore(
         router.navigate(['/order-success']);
       },
     };
+  }),
+  withHooks({
+    onInit(store) {
+      const api = inject(ClienteApiService);
+      if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
+      const user = store.user();
+      if (!user) return;
+      if (!user.codigo) {
+        store.clearUser();
+        return;
+      }
+      api.buscar(user.codigo).subscribe({
+        next: (c) => {
+          if (store.user()?.codigo !== user.codigo) return;
+          if (c.codigo && c.nome && c.email) store.updateUser({ ...user, name: c.nome, email: c.email });
+          else store.clearUser();
+        },
+        error: (e) => {
+          if ([401, 403].includes(e.status) && store.user()?.codigo === user.codigo) store.clearUser();
+        },
+      });
+    },
   }),
 );
 export type { Product };

@@ -60,7 +60,7 @@
             "server": "src/main.server.ts",
             "outputMode": "server",
             "security": {
-              "allowedHosts": []
+              "allowedHosts": ["localhost"]
             },
             "ssr": {
               "entry": "src/server.ts"
@@ -68,6 +68,7 @@
           },
           "configurations": {
             "production": {
+              "optimization": { "scripts": true, "styles": true, "fonts": false },
               "budgets": [
                 {
                   "type": "initial",
