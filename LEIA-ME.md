@@ -26,7 +26,7 @@ npm.cmd ci
 npm.cmd start
 ```
 
-Abra http://localhost:4200 no navegador. A API atende em http://localhost:8080. O banco H2 cria os arquivos dos clientes em backend/data ao iniciar. Para manter os cadastros, sempre inicie o backend a partir da mesma pasta. As senhas são armazenadas com BCrypt.
+Abra http://localhost:4200 no navegador. A API atende em http://localhost:8080.
 
 ## Demonstrar a parte de clientes
 
