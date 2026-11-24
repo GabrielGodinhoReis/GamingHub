@@ -118,16 +118,32 @@ import { ToggleWishlistButton } from '../../components/toggle-wishlist-button/to
 
                 <div class="carousel-overlay">
                   <div class="carousel-bottom">
-                    <span
-                      class="
-                        carousel-price
-                        cursor-pointer
-                      "
+                    <div
+                      class="carousel-price cursor-pointer flex flex-col items-start"
                       [routerLink]="['/product', currentGameData?.id]"
                     >
-                      R$
-                      {{ currentGameData?.price?.toFixed(2)?.replace('.', ',') }}
-                    </span>
+                      @if (
+                        currentGameData?.promotionalPrice != null &&
+                        currentGameData.promotionalPrice > 0 &&
+                        currentGameData.promotionalPrice < currentGameData.price
+                      ) {
+                        <span class="text-sm text-gray-300 line-through">
+                          R$ {{ currentGameData.price.toFixed(2).replace('.', ',') }}
+                        </span>
+
+                        <span class="text-[#8b5cf6] font-bold">
+                          R$ {{ currentGameData.promotionalPrice.toFixed(2).replace('.', ',') }}
+                        </span>
+
+                        <span class="text-xs text-[#8b5cf6] font-bold">
+                          {{ currentDiscount }}% OFF
+                        </span>
+                      } @else {
+                        <span>
+                          R$ {{ currentGameData?.price?.toFixed(2)?.replace('.', ',') }}
+                        </span>
+                      }
+                    </div>
 
                     <button
                       class="carousel-buy-button"
@@ -365,6 +381,24 @@ export default class ProductsGrid {
     }
 
     return games[order[this.carouselIndex()]];
+  }
+
+  get currentDiscount(): number {
+    const game = this.currentGameData;
+
+    if (
+      !game ||
+      game.promotionalPrice == null ||
+      game.promotionalPrice <= 0 ||
+      game.promotionalPrice >= game.price ||
+      game.price <= 0
+    ) {
+      return 0;
+    }
+
+    return Math.round(
+      (1 - game.promotionalPrice / game.price) * 100
+    );
   }
 
   get nextGameData() {

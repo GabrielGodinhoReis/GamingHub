@@ -1,3 +1,4 @@
+
 import { Component, inject, input, output } from '@angular/core';
 
 import { CurrencyPipe } from '@angular/common';
@@ -64,12 +65,32 @@ import { RouterLink } from '@angular/router';
         <!-- PREÇO + CARRINHO -->
         <div class="flex items-center justify-between mt-auto">
           <!-- PREÇO -->
-          <span
-            class="text-1xl font-bold text-white cursor-pointer"
+          <div
+            class="flex flex-col cursor-pointer"
             [routerLink]="['/product', product().id]"
           >
-            {{ product().price | currency: 'BRL' : 'symbol' : '1.2-2' }}
-          </span>
+            @if (
+              product().promotionalPrice != null &&
+              product().promotionalPrice! > 0 &&
+              product().promotionalPrice! < product().price
+            ) {
+              <span class="text-xs text-gray-400 line-through">
+                {{ product().price | currency: 'BRL' : 'symbol' : '1.2-2' }}
+              </span>
+
+              <span class="text-xl font-bold text-[#8b5cf6]">
+                {{ product().promotionalPrice | currency: 'BRL' : 'symbol' : '1.2-2' }}
+              </span>
+
+              <span class="text-xs font-semibold text-[#8b5cf6]">
+                {{ percentualDesconto }}% OFF
+              </span>
+            } @else {
+              <span class="text-xl font-bold text-white">
+                {{ product().price | currency: 'BRL' : 'symbol' : '1.2-2' }}
+              </span>
+            }
+          </div>
 
           <!-- ADICIONAR AO CARRINHO -->
           <button
@@ -81,7 +102,9 @@ import { RouterLink } from '@angular/router';
             (click)="addToCart()"
             [disabled]="!product().inStock"
           >
-            <mat-icon class="!text-[18px] !w-[18px] !h-[18px]"> shopping_cart </mat-icon>
+            <mat-icon class="!text-[18px] !w-[18px] !h-[18px]">
+              shopping_cart
+            </mat-icon>
 
             <span class="whitespace-nowrap">
               {{ product().inStock ? 'Adicionar ao Carrinho' : 'Fora de Estoque' }}
@@ -98,6 +121,22 @@ export class ProductCard {
   cartStore = inject(CartStore);
 
   addToCartClicked = output<Product>();
+
+  get percentualDesconto(): number {
+    const produto = this.product();
+
+    if (
+      produto.promotionalPrice == null ||
+      produto.promotionalPrice <= 0 ||
+      produto.price <= 0
+    ) {
+      return 0;
+    }
+
+    return Math.round(
+      (1 - produto.promotionalPrice / produto.price) * 100
+    );
+  }
 
   addToCart() {
     this.cartStore.addToCart(this.product());

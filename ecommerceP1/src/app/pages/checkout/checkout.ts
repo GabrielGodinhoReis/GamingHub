@@ -1,3 +1,4 @@
+
 import { Component, inject } from '@angular/core';
 
 import { CurrencyPipe } from '@angular/common';
@@ -19,10 +20,17 @@ import { Toaster } from '../../services/toaster';
 @Component({
   selector: 'app-checkout',
 
-  imports: [CurrencyPipe, RouterLink, MatButtonModule, MatIconModule, MatRadioModule],
+  imports: [
+    CurrencyPipe,
+    RouterLink,
+    MatButtonModule,
+    MatIconModule,
+    MatRadioModule,
+  ],
 
   template: `
     <div class="max-w-[1200px] mx-auto p-4 sm:p-6 pb-24 text-white space-y-5 sm:space-y-6">
+
       <!-- Voltar para o carrinho -->
       <a routerLink="/cart" mat-button class="!text-gray-300">
         <mat-icon>arrow_back</mat-icon>
@@ -33,14 +41,16 @@ import { Toaster } from '../../services/toaster';
       <h1 class="text-2xl sm:text-3xl font-bold">Finalizar Compra</h1>
 
       <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 sm:gap-8">
+
         <!-- Métodos de pagamento -->
         <div class="lg:col-span-3">
           <div
             class="p-4 sm:p-6 bg-gray-900 rounded-xl border border-gray-800 space-y-5 sm:space-y-6"
           >
+
             <!-- Título da seção -->
             <div class="flex items-center gap-2 border-b border-gray-800 pb-3">
-              <mat-icon class="text-purple-400"> payment </mat-icon>
+              <mat-icon class="text-purple-400">payment</mat-icon>
 
               <h2 class="text-lg sm:text-xl font-bold">Método de Pagamento</h2>
             </div>
@@ -51,18 +61,21 @@ import { Toaster } from '../../services/toaster';
               (change)="paymentMethod = $event.value"
               class="flex flex-col gap-3 sm:gap-4"
             >
+
               <!-- Cartão de crédito -->
               <div
                 class="p-3 sm:p-4 border border-gray-700 rounded-lg hover:border-purple-500 transition"
               >
                 <mat-radio-button value="credit">
                   <div class="flex items-center gap-3">
-                    <mat-icon class="text-purple-400"> credit_card </mat-icon>
+                    <mat-icon class="text-purple-400">credit_card</mat-icon>
 
                     <div>
                       <p class="font-bold text-white">Cartão de Crédito</p>
 
-                      <p class="text-sm text-gray-400">Pague com seu cartão de crédito</p>
+                      <p class="text-sm text-gray-400">
+                        Pague com seu cartão de crédito
+                      </p>
                     </div>
                   </div>
                 </mat-radio-button>
@@ -74,7 +87,7 @@ import { Toaster } from '../../services/toaster';
               >
                 <mat-radio-button value="debit">
                   <div class="flex items-center gap-3">
-                    <mat-icon class="text-blue-400"> credit_card </mat-icon>
+                    <mat-icon class="text-blue-400">credit_card</mat-icon>
 
                     <div>
                       <p class="font-bold text-white">Cartão de Débito</p>
@@ -93,12 +106,14 @@ import { Toaster } from '../../services/toaster';
               >
                 <mat-radio-button value="pix">
                   <div class="flex items-center gap-3">
-                    <mat-icon class="text-green-400"> account_balance </mat-icon>
+                    <mat-icon class="text-green-400">account_balance</mat-icon>
 
                     <div>
                       <p class="font-bold text-white">Pix</p>
 
-                      <p class="text-sm text-gray-400">Pagamento instantâneo via Pix</p>
+                      <p class="text-sm text-gray-400">
+                        Pagamento instantâneo via Pix
+                      </p>
                     </div>
                   </div>
                 </mat-radio-button>
@@ -110,16 +125,19 @@ import { Toaster } from '../../services/toaster';
               >
                 <mat-radio-button value="paypal">
                   <div class="flex items-center gap-3">
-                    <mat-icon class="text-blue-400"> account_balance_wallet </mat-icon>
+                    <mat-icon class="text-blue-400">account_balance_wallet</mat-icon>
 
                     <div>
                       <p class="font-bold text-white">PayPal</p>
 
-                      <p class="text-sm text-gray-400">Pague usando sua conta PayPal</p>
+                      <p class="text-sm text-gray-400">
+                        Pague usando sua conta PayPal
+                      </p>
                     </div>
                   </div>
                 </mat-radio-button>
               </div>
+
             </mat-radio-group>
           </div>
         </div>
@@ -128,43 +146,71 @@ import { Toaster } from '../../services/toaster';
         <div
           class="lg:col-span-2 p-4 sm:p-6 bg-gray-900 rounded-xl border border-gray-800 h-fit space-y-4"
         >
+
           <h2 class="text-lg sm:text-xl font-bold border-b border-gray-800 pb-3">
             Resumo do Pedido
           </h2>
 
           <!-- Produtos -->
           <div class="space-y-3 max-h-[250px] overflow-y-auto pr-2">
+
             @for (item of cartStore.items(); track item.product.id) {
               <div
                 class="flex justify-between items-center gap-3 text-sm border-b border-gray-800/50 pb-2"
               >
+
                 <div class="min-w-0">
                   <p class="font-semibold text-white truncate">
                     {{ item.product.name }}
                   </p>
 
-                  <p class="text-gray-400">Qtd: {{ item.quantity }}</p>
+                  <p class="text-gray-400">
+                    Qtd: {{ item.quantity }}
+                  </p>
                 </div>
 
-                <span class="font-bold text-blue-400 whitespace-nowrap">
-                  {{ item.product.price * item.quantity | currency: 'BRL' }}
-                </span>
+                <!-- Preço do produto -->
+                <div class="flex flex-col items-end whitespace-nowrap">
+
+                  @if (
+                    item.product.promotionalPrice != null &&
+                    item.product.promotionalPrice > 0 &&
+                    item.product.promotionalPrice < item.product.price
+                  ) {
+                    <span class="text-xs text-gray-400 line-through">
+                      {{ item.product.price * item.quantity | currency: 'BRL' }}
+                    </span>
+
+                    <span class="font-bold text-[#8b5cf6]">
+                      {{ cartStore.getEffectivePrice(item.product) * item.quantity | currency: 'BRL' }}
+                    </span>
+                  } @else {
+                    <span class="font-bold text-[#8b5cf6]">
+                      {{ cartStore.getEffectivePrice(item.product) * item.quantity | currency: 'BRL' }}
+                    </span>
+                  }
+
+                </div>
+
               </div>
             }
+
           </div>
 
           <!-- Valores -->
           <div class="space-y-2 border-t border-gray-800 pt-3 text-gray-300">
+
             <!-- Total -->
             <div
-              class="flex justify-between gap-3 text-lg sm:text-xl font-extrabold text-green-400 border-t border-gray-800 pt-3"
+              class="flex justify-between gap-3 text-lg sm:text-xl font-extrabold text-[#8b5cf6] border-t border-gray-800 pt-3"
             >
-              <span> Total: </span>
+              <span>Total:</span>
 
               <span class="whitespace-nowrap">
                 {{ cartStore.subtotal() | currency: 'BRL' }}
               </span>
             </div>
+
           </div>
 
           <!-- Confirmar pagamento -->
@@ -178,6 +224,7 @@ import { Toaster } from '../../services/toaster';
               Confirmar e Pagar
             </span>
           </button>
+
         </div>
       </div>
     </div>
@@ -190,7 +237,7 @@ export default class Checkout {
 
   ecommerceStore = inject(EcommerceStore);
 
-  paymentMethod = 'credit';
+  paymentMethod: 'credit' | 'debit' | 'pix' | 'paypal' = 'credit';
 
   onSubmit() {
     if (!this.paymentMethod) {
@@ -199,6 +246,6 @@ export default class Checkout {
       return;
     }
 
-    this.ecommerceStore.placeOrder();
+    this.ecommerceStore.placeOrder(this.paymentMethod);
   }
 }

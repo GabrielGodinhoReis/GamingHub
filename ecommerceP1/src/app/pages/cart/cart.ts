@@ -1,3 +1,4 @@
+
 import { Component, inject } from '@angular/core';
 
 import { CurrencyPipe } from '@angular/common';
@@ -141,9 +142,29 @@ import { EcommerceStore } from '../../ecommerce-store';
                       {{ item.product.name }}
                     </h3>
 
-                    <p class="!text-[#8b5cf6] font-semibold">
-                      {{ item.product.price | currency: 'BRL' }}
-                    </p>
+                    @if (
+                      item.product.promotionalPrice != null &&
+                      item.product.promotionalPrice > 0 &&
+                      item.product.promotionalPrice < item.product.price
+                    ) {
+                      <div class="flex flex-col">
+                        <span class="text-sm text-gray-400 line-through">
+                          {{ item.product.price | currency: 'BRL' }}
+                        </span>
+
+                        <span class="text-lg text-[#8b5cf6] font-bold">
+                          {{ store.getEffectivePrice(item.product) | currency: 'BRL' }}
+                        </span>
+
+                        <span class="text-xs text-[#8b5cf6] font-semibold">
+                          PROMOÇÃO
+                        </span>
+                      </div>
+                    } @else {
+                      <p class="!text-[#8b5cf6] font-semibold">
+                        {{ item.product.price | currency: 'BRL' }}
+                      </p>
+                    }
                   </div>
                 </div>
 
@@ -233,7 +254,22 @@ import { EcommerceStore } from '../../ecommerce-store';
 
                     <p class="text-xs text-gray-400">
                       {{ item.quantity }}x
-                      {{ item.product.price | currency: 'BRL' }}
+
+                      @if (
+                        item.product.promotionalPrice != null &&
+                        item.product.promotionalPrice > 0 &&
+                        item.product.promotionalPrice < item.product.price
+                      ) {
+                        <span class="line-through">
+                          {{ item.product.price | currency: 'BRL' }}
+                        </span>
+
+                        <span class="text-[#8b5cf6] font-semibold">
+                          {{ store.getEffectivePrice(item.product) | currency: 'BRL' }}
+                        </span>
+                      } @else {
+                        {{ item.product.price | currency: 'BRL' }}
+                      }
                     </p>
                   </div>
 
@@ -241,7 +277,7 @@ import { EcommerceStore } from '../../ecommerce-store';
                     class="text-sm font-bold text-white whitespace-nowrap"
                   >
                     {{
-                      item.product.price * item.quantity
+                      store.getEffectivePrice(item.product) * item.quantity
                         | currency: 'BRL'
                     }}
                   </span>
@@ -252,12 +288,12 @@ import { EcommerceStore } from '../../ecommerce-store';
             <div
               class="flex justify-between text-xl font-extrabold border-t border-gray-800 pt-3 gap-3"
             >
-              <span class="!text-green-400">
+              <span class="!text-[#8b5cf6]">
                 Total:
               </span>
 
               <span
-                class="!text-green-400 whitespace-nowrap"
+                class="!text-[#8b5cf6] whitespace-nowrap"
               >
                 {{ store.subtotal() | currency: 'BRL' }}
               </span>

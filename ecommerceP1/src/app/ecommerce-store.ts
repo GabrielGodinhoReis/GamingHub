@@ -25,11 +25,17 @@ import { User, SignInParams, SignUpParams } from './models/user';
 
 import { CartStore } from './cart-store';
 
+import { AccountStorage } from './services/account-storage';
+
 import { Toaster } from './services/toaster';
 
 import { ProductApiService } from './services/product-api';
 
 import { ClienteApiService } from './services/cliente-api';
+
+import { firstValueFrom } from 'rxjs';
+
+import { PedidoApiService } from './services/pedido-api';
 
 if (typeof globalThis.localStorage === 'undefined') {
   const mockStorage = new Map<string, string>();
@@ -894,10 +900,9 @@ export const EcommerceStore = signalStore(
   // STORAGE
   // -------------------------------------------------------
 
-  withStorageSync({
+    withStorageSync({
     key: 'modern-store',
-    select: ({ wishlistItems, user, featuredProductIds }) => ({
-      wishlistItems,
+    select: ({ user, featuredProductIds }) => ({
       user,
       featuredProductIds,
     }),
@@ -925,14 +930,22 @@ export const EcommerceStore = signalStore(
       let filtered = products();
 
       if (categoria !== 'todos' && categoria !== 'games') {
-        filtered = filtered.filter((p) => p.category.toLowerCase() === categoria);
+        filtered = filtered.filter(
+          (p) => p.category.toLowerCase() === categoria
+        );
       }
 
       if (pesquisa) {
-        filtered = filtered.filter((p) => p.name.toLowerCase().includes(pesquisa));
+        filtered = filtered.filter((p) =>
+          p.name.toLowerCase().includes(pesquisa) ||
+          (p.description ?? '').toLowerCase().includes(pesquisa) ||
+          p.category.toLowerCase().includes(pesquisa)
+        );
       }
 
-      return [...filtered].sort((a, b) => a.name.localeCompare(b.name));
+      return [...filtered].sort(
+        (a, b) => a.name.localeCompare(b.name)
+      );
     }),
 
     // -----------------------------------------------
@@ -977,10 +990,44 @@ export const EcommerceStore = signalStore(
 
     const platformId = inject(PLATFORM_ID);
 
+    const pedidoApi = inject(PedidoApiService);
+
     let apiProductsLoading = false;
 
-    return {
+    let activeWishlistAccount: number | null = null;
 
+    const saveWishlist = () => {
+      if (activeWishlistAccount === null) return;
+
+      AccountStorage.write(
+        'wishlist',
+        activeWishlistAccount,
+        store.wishlistItems(),
+      );
+    };
+
+    const loadWishlist = (codigoCliente: number) => {
+      activeWishlistAccount = codigoCliente;
+
+      const wishlistItems = AccountStorage.read<Product[]>(
+        'wishlist',
+        codigoCliente,
+        [],
+      );
+
+      patchState(store, { wishlistItems });
+    };
+
+    // Descarrega a wishlist sem apagar os dados salvos.
+    const unloadWishlist = () => {
+      activeWishlistAccount = null;
+
+      patchState(store, { wishlistItems: [] });
+    };
+
+    return {
+      loadWishlist,
+      unloadWishlist,
       // -----------------------------------------------
       // DESTAQUES DA VITRINE
       // -----------------------------------------------
@@ -1025,7 +1072,9 @@ export const EcommerceStore = signalStore(
         apiProductsLoading = true;
 
         productApi.listarProdutos().subscribe({
+          
           next: (apiProducts) => {
+
           // Mantém os produtos atuais, incluindo os 60 jogos fixos.
           const productsById = new Map(
             store.products().map((product) => [product.id, product])
@@ -1089,47 +1138,59 @@ export const EcommerceStore = signalStore(
       // WISHLIST
       // -----------------------------------------------
 
-      addtoWishlist: (product: Product) => {
-        const updatedWishlistItems = produce(store.wishlistItems(), (draft) => {
-          if (!draft.find((p) => p.id === product.id)) {
-            draft.push(product);
-          }
-        });
+      addToWishlist: (product: Product) => {
+      const updatedWishlistItems = produce(store.wishlistItems(), (draft) => {
+        if (!draft.find((p) => p.id === product.id)) {
+          draft.push(product);
+        }
+      });
 
-        patchState(store, {
-          wishlistItems: updatedWishlistItems,
-        });
+      patchState(store, {
+        wishlistItems: updatedWishlistItems,
+      });
 
-        toaster.sucess('Esse Jogo foi Adicionado à sua Lista de Desejos!');
-      },
+      saveWishlist();
 
-      // -----------------------------------------------
+      toaster.sucess('Esse Jogo foi Adicionado à sua Lista de Desejos!');
+    },
 
-      removeFromWishlist: (product: Product) => {
-        patchState(store, {
-          wishlistItems: store.wishlistItems().filter((p) => p.id !== product.id),
-        });
+    // -----------------------------------------------
 
-        toaster.error('Esse Jogo foi Removido da sua Lista de Desejos!');
-      },
+    removeFromWishlist: (product: Product) => {
+      patchState(store, {
+        wishlistItems: store.wishlistItems().filter(
+          (p) => p.id !== product.id,
+        ),
+      });
 
-      // -----------------------------------------------
+      saveWishlist();
 
-      removeFromWishlistWithoutMessage: (product: Product) => {
-        patchState(store, {
-          wishlistItems: store.wishlistItems().filter((p) => p.id !== product.id),
-        });
-      },
+      toaster.error('Esse Jogo foi Removido da sua Lista de Desejos!');
+    },
 
-      // -----------------------------------------------
+    // -----------------------------------------------
 
-      clearWishlist: () => {
-        patchState(store, {
-          wishlistItems: [],
-        });
+    removeFromWishlistWithoutMessage: (product: Product) => {
+      patchState(store, {
+        wishlistItems: store.wishlistItems().filter(
+          (p) => p.id !== product.id,
+        ),
+      });
 
-        toaster.error('Todos os Jogos foram Removidos da Lista de Desejos!');
-      },
+      saveWishlist();
+    },
+
+    // -----------------------------------------------
+
+    clearWishlist: () => {
+      patchState(store, {
+        wishlistItems: [],
+      });
+
+      saveWishlist();
+
+      toaster.error('Todos os Jogos foram Removidos da Lista de Desejos!');
+    },
 
       // -----------------------------------------------
       // LOGIN
@@ -1139,11 +1200,11 @@ export const EcommerceStore = signalStore(
         return new Promise((resolve) => {
           clienteApi.login(params.email.trim(), params.password ?? '').subscribe({
             next: (cliente) => {
-              if (!cliente) {
-                toaster.error('E-mail ou senha incorretos!');
-                resolve(false);
-                return;
-              }
+              if (!cliente || cliente.codigo == null) {
+              toaster.error('E-mail ou senha incorretos!');
+              resolve(false);
+              return;
+            }
 
               const user: User = {
                 id: String(cliente.codigo),
@@ -1153,6 +1214,10 @@ export const EcommerceStore = signalStore(
               };
 
               patchState(store, { user });
+
+              cartStore.loadAccount(cliente.codigo);
+
+              loadWishlist(cliente.codigo);
 
               toaster.sucess(`Bem-vindo(a) de volta, ${user.name}!`);
 
@@ -1193,22 +1258,24 @@ export const EcommerceStore = signalStore(
               next: () => {
                 toaster.sucess('Conta criada com sucesso!');
 
-                // A API de cadastro não devolve o cliente; faz login em seguida.
                 clienteApi.login(email, params.password ?? '').subscribe({
                   next: (cliente) => {
-                    if (!cliente) {
-                      toaster.error('Conta criada. Entre com seu e-mail e senha.');
-                      resolve(false);
-                      return;
-                    }
-                    patchState(store, {
-                      user: {
-                        id: String(cliente.codigo),
-                        codigo: cliente.codigo,
-                        name: cliente.nome ?? params.name,
-                        email: cliente.email ?? email,
-                      },
-                    });
+                    if (!cliente || cliente.codigo == null) {
+                    toaster.error('Conta criada. Entre com seu e-mail e senha.');
+                    resolve(false);
+                    return;
+                  }
+
+                    const user: User = {
+                      id: String(cliente.codigo),
+                      codigo: cliente.codigo,
+                      name: cliente.nome ?? params.name,
+                      email: cliente.email ?? email,
+                    };
+
+                    patchState(store, { user });
+
+                    cartStore.loadAccount(cliente.codigo);
 
                     if (params.dialogId) {
                       dialog.getDialogById(params.dialogId)?.close();
@@ -1249,14 +1316,21 @@ export const EcommerceStore = signalStore(
       signOut() {
         clienteApi.logout().subscribe({
           next: () => {
-            patchState(store, { user: undefined });
-            toaster.sucess('Sessão encerrada!');
-          },
+          cartStore.unloadAccount();
+          unloadWishlist();
+
+          patchState(store, { user: undefined });
+
+          toaster.sucess('Sessão encerrada!');
+        },
           error: () => toaster.error('Erro ao sair. Tente novamente.'),
         });
       },
 
       clearUser() {
+        cartStore.unloadAccount();
+        unloadWishlist();
+
         patchState(store, { user: undefined });
       },
 
@@ -1286,10 +1360,16 @@ export const EcommerceStore = signalStore(
       // FINALIZAR PEDIDO
       // -----------------------------------------------
 
-      async placeOrder() {
+      async placeOrder(
+        formaPagamento: 'credit' | 'debit' | 'pix' | 'paypal' = 'credit',
+      ) {
         if (!store.user()) {
           toaster.error('Faça login antes de finalizar o pedido!');
+          return;
+        }
 
+        if (cartStore.items().length === 0) {
+          toaster.error('Seu carrinho está vazio!');
           return;
         }
 
@@ -1297,36 +1377,82 @@ export const EcommerceStore = signalStore(
           loading: true,
         });
 
-        await new Promise<void>((resolve) => setTimeout(resolve, 1000));
+        try {
+          const pedido = {
+            formaPagamento,
+            itens: cartStore.items().map((item) => ({
+              produtoId: String(item.product.id),
+              quantidade: item.quantity,
+            })),
+          };
 
-        cartStore.clearCart();
+          const resposta = await firstValueFrom(
+            pedidoApi.cadastrarPedido(pedido),
+          );
 
-        patchState(store, {
-          loading: false,
-        });
+          console.log('Pedido cadastrado:', resposta);
 
-        router.navigate(['/order-success']);
+          cartStore.clearCart();
+
+          await router.navigate(['/order-success']);
+        } catch (error) {
+          console.error('Erro ao cadastrar pedido:', error);
+
+          toaster.error(
+            'Não foi possível finalizar a compra. Tente novamente.',
+          );
+        } finally {
+          patchState(store, {
+            loading: false,
+          });
+        }
       },
     };
   }),
-  withHooks({
+    withHooks({
     onInit(store) {
       const api = inject(ClienteApiService);
+      const cartStore = inject(CartStore);
+
       if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
+
       const user = store.user();
+
       if (!user) return;
+
       if (!user.codigo) {
         store.clearUser();
         return;
       }
+
       api.buscar(user.codigo).subscribe({
         next: (c) => {
           if (store.user()?.codigo !== user.codigo) return;
-          if (c.codigo && c.nome && c.email) store.updateUser({ ...user, name: c.nome, email: c.email });
-          else store.clearUser();
+
+          if (c.codigo != null && c.nome && c.email) {
+            store.updateUser({
+              ...user,
+              name: c.nome,
+              email: c.email,
+            });
+
+            // Recupera o carrinho da conta.
+            cartStore.loadAccount(c.codigo);
+
+            // Recupera a wishlist da conta.
+            store.loadWishlist(c.codigo);
+          } else {
+            store.clearUser();
+          }
         },
+
         error: (e) => {
-          if ([401, 403].includes(e.status) && store.user()?.codigo === user.codigo) store.clearUser();
+          if (
+            [401, 403].includes(e.status) &&
+            store.user()?.codigo === user.codigo
+          ) {
+            store.clearUser();
+          }
         },
       });
     },

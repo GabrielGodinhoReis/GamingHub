@@ -15,7 +15,7 @@ import { MatIconModule } from '@angular/material/icon';
       <h1 class="text-3xl font-bold">Pedido Confirmado!</h1>
 
       <p class="text-gray-300">
-        Obrigado pela sua compra! Os detalhes do pedido e as chaves de ativação foram enviados para o seu e-mail.
+        Obrigado pela sua compra!<br><br>Os detalhes do pedido e as chaves de ativação estão disponíveis no seu perfil, na seção Minha Biblioteca.
       </p>
 
       <a

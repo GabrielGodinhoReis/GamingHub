@@ -1,7 +1,6 @@
+
 import { Component } from '@angular/core';
-
 import { RouterLink, RouterOutlet } from '@angular/router';
-
 import { Header } from './layout/header/header';
 
 @Component({
@@ -19,7 +18,6 @@ import { Header } from './layout/header/header';
       overflow-y: auto;
       overflow-x: hidden;
       box-sizing: border-box;
-
       display: flex;
       flex-direction: column;
     }
@@ -44,34 +42,17 @@ import { Header } from './layout/header/header';
 
       <footer
         class="
-          relative
-          z-0
-          border-t
-          border-gray-800
-          bg-[#15171e]
-          text-white
-          shrink-0
+          relative z-0 border-t border-gray-800
+          bg-[#15171e] text-white shrink-0
         "
       >
-        <div
-          class="
-            mx-auto
-            max-w-[1200px]
-            px-6
-            py-8
-          "
-        >
+        <div class="mx-auto max-w-[1200px] px-6 py-8">
           <div
             class="
-              flex
-              flex-col
-              gap-8
-              md:flex-row
-              md:items-start
-              md:justify-between
+              flex flex-col gap-8
+              md:flex-row md:items-start md:justify-between
             "
           >
-            <!-- MARCA -->
             <div class="max-w-sm">
               <h2 class="text-xl font-bold">
                 Gaming
@@ -83,9 +64,10 @@ import { Header } from './layout/header/header';
               </p>
             </div>
 
-            <!-- NAVEGAÇÃO -->
             <div>
-              <h3 class="mb-3 text-sm font-semibold text-white">Navegação</h3>
+              <h3 class="mb-3 text-sm font-semibold text-white">
+                Navegação
+              </h3>
 
               <div class="flex flex-col gap-2 text-sm text-gray-400">
                 <a routerLink="/products/Games" class="transition-colors hover:text-[#8b5cf6]">
@@ -96,13 +78,16 @@ import { Header } from './layout/header/header';
                   Lista de Desejos
                 </a>
 
-                <a routerLink="/cart" class="transition-colors hover:text-[#8b5cf6]"> Carrinho </a>
+                <a routerLink="/cart" class="transition-colors hover:text-[#8b5cf6]">
+                  Carrinho
+                </a>
               </div>
             </div>
 
-            <!-- INFORMAÇÕES -->
             <div>
-              <h3 class="mb-3 text-sm font-semibold text-white">Gaming Hub</h3>
+              <h3 class="mb-3 text-sm font-semibold text-white">
+                Gaming Hub
+              </h3>
 
               <div class="flex flex-col gap-2 text-sm text-gray-400">
                 <span>Entrega digital</span>
@@ -112,16 +97,10 @@ import { Header } from './layout/header/header';
             </div>
           </div>
 
-          <!-- COPYRIGHT -->
           <div
             class="
-              mt-8
-              border-t
-              border-gray-800
-              pt-5
-              text-center
-              text-xs
-              text-gray-500
+              mt-8 border-t border-gray-800 pt-5
+              text-center text-xs text-gray-500
             "
           >
             © 2026 Gaming Hub. Todos os direitos reservados.

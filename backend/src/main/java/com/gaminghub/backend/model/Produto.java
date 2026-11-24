@@ -7,6 +7,7 @@ public class Produto {
     private String name;
     private String description;
     private double price;
+    private Double promotionalPrice;
     private String imageUrl;
     private String bannerUrl;
     private double rating;
@@ -64,6 +65,14 @@ public class Produto {
 
     public void setPrice(double price) {
         this.price = price;
+    }
+
+    public Double getPromotionalPrice() {
+        return promotionalPrice;
+    }
+
+    public void setPromotionalPrice(Double promotionalPrice) {
+        this.promotionalPrice = promotionalPrice;
     }
 
     public String getImageUrl() {

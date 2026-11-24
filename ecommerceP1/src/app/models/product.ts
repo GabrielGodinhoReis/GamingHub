@@ -3,6 +3,7 @@ export type Product = {
   name: string;
   description: string;
   price: number;
+  promotionalPrice?: number | null;
   imageUrl: string;
   bannerUrl: string;
   rating: number;

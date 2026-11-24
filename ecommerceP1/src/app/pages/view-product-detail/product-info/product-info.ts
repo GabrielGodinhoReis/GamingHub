@@ -171,9 +171,29 @@ import { CartStore } from '../../../cart-store';
       {{ product().name }}
     </h1>
 
-    <p class="product-price text-2xl sm:text-3xl font-extrabold mb-4">
-      {{ product().price | currency: 'BRL' : 'symbol' : '1.2-2' }}
-    </p>
+    <div class="mb-4 flex flex-col items-start">
+      @if (
+        product().promotionalPrice != null &&
+        product().promotionalPrice! > 0 &&
+        product().promotionalPrice! < product().price
+      ) {
+        <span class="text-lg text-gray-400 line-through">
+          {{ product().price | currency: 'BRL' : 'symbol' : '1.2-2' }}
+        </span>
+
+        <span class="product-price text-2xl sm:text-3xl font-extrabold text-[#8b5cf6]">
+          {{ product().promotionalPrice | currency: 'BRL' : 'symbol' : '1.2-2' }}
+        </span>
+
+        <span class="text-sm font-bold text-[#8b5cf6]">
+          {{ ((1 - product().promotionalPrice! / product().price) * 100).toFixed(0) }}% OFF
+        </span>
+      } @else {
+        <p class="product-price text-2xl sm:text-3xl font-extrabold">
+          {{ product().price | currency: 'BRL' : 'symbol' : '1.2-2' }}
+        </p>
+      }
+    </div>
 
     <app-stock-status class="mb-4" [inStock]="product().inStock" />
 

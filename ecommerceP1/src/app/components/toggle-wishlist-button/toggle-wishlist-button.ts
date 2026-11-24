@@ -40,7 +40,7 @@ export class ToggleWishlistButton {
     if (this.isInWishlist()) {
       this.store.removeFromWishlist(this.product());
     } else {
-      this.store.addtoWishlist(this.product());
+      this.store.addToWishlist(this.product());
     }
   }
 }

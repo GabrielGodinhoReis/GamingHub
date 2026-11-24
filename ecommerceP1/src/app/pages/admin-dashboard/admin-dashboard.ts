@@ -83,10 +83,6 @@ import { EcommerceStore } from '../../ecommerce-store';
       <!-- CONTEÚDO PRINCIPAL -->
       <div class="flex-1 min-w-0 max-w-7xl mx-auto w-full">
 
-        <!-- ===================================== -->
-        <!-- PAINEL GERAL -->
-        <!-- ===================================== -->
-
         @if (secaoAtiva === 'painel') {
 
           <!-- TÍTULO -->
@@ -100,7 +96,6 @@ import { EcommerceStore } from '../../ecommerce-store';
           <!-- INDICADORES -->
           <section class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
 
-            <!-- CADASTRADOS -->
             <div class="relative overflow-hidden bg-gradient-to-br from-[#1c1930] to-[#15151f] border border-purple-500/20 rounded-2xl p-6 group hover:border-purple-500/50 transition-all duration-300">
               <div class="absolute -right-8 -top-8 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl"></div>
 
@@ -121,7 +116,6 @@ import { EcommerceStore } from '../../ecommerce-store';
               <div class="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-purple-600 to-transparent"></div>
             </div>
 
-            <!-- DISPONÍVEIS -->
             <div class="relative overflow-hidden bg-gradient-to-br from-[#14251f] to-[#15151f] border border-green-500/20 rounded-2xl p-6 group hover:border-green-500/50 transition-all duration-300">
               <div class="absolute -right-8 -top-8 w-32 h-32 bg-green-500/10 rounded-full blur-2xl"></div>
 
@@ -142,7 +136,6 @@ import { EcommerceStore } from '../../ecommerce-store';
               <div class="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-green-500 to-transparent"></div>
             </div>
 
-            <!-- INDISPONÍVEIS -->
             <div class="relative overflow-hidden bg-gradient-to-br from-[#29191d] to-[#15151f] border border-red-500/20 rounded-2xl p-6 group hover:border-red-500/50 transition-all duration-300">
               <div class="absolute -right-8 -top-8 w-32 h-32 bg-red-500/10 rounded-full blur-2xl"></div>
 
@@ -198,7 +191,18 @@ import { EcommerceStore } from '../../ecommerce-store';
               @if (editandoId) {
                 <span class="text-purple-400 text-sm">Modo de edição</span>
               }
+
+              <button
+                type="button"
+                (click)="formularioAberto = !formularioAberto"
+                class="bg-purple-600 hover:bg-purple-700 px-5 py-3 rounded-lg font-semibold transition"
+              >
+                {{ formularioAberto ? 'Fechar formulário' : '+ Cadastrar novo jogo' }}
+              </button>
+
             </div>
+
+            @if (formularioAberto) {
 
             <form
               #produtoForm="ngForm"
@@ -251,7 +255,7 @@ import { EcommerceStore } from '../../ecommerce-store';
 
                 <!-- PREÇO -->
                 <div>
-                  <label class="block text-sm text-gray-300 mb-2">Preço</label>
+                  <label class="block text-sm text-gray-300 mb-2">Preço original</label>
                   <input
                     type="number"
                     name="price"
@@ -290,6 +294,71 @@ import { EcommerceStore } from '../../ecommerce-store';
                       A nota deve estar entre 0 e 5.
                     </p>
                   }
+                </div>
+
+                <!-- PROMOÇÃO -->
+                <div class="md:col-span-2 bg-[#09090f] border border-purple-500/20 rounded-xl p-5">
+
+                  <label class="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="promocaoAtiva"
+                      [(ngModel)]="promocaoAtiva"
+                      (ngModelChange)="alterarPromocao($event)"
+                      class="w-5 h-5 accent-purple-500"
+                    />
+
+                    <span>
+                      <span class="block text-sm font-semibold text-white">
+                        Ativar promoção
+                      </span>
+                      <span class="block text-xs text-gray-400 mt-1">
+                        Habilite para oferecer este jogo por um preço especial.
+                      </span>
+                    </span>
+                  </label>
+
+                  @if (promocaoAtiva) {
+                    <div class="mt-5 max-w-md">
+                      <label class="block text-sm text-gray-300 mb-2">
+                        Preço promocional
+                      </label>
+
+                      <input
+                        type="number"
+                        name="promotionalPrice"
+                        [(ngModel)]="formProduto.promotionalPrice"
+                        min="0.01"
+                        [max]="formProduto.price - 0.01"
+                        step="0.01"
+                        required
+                        #precoPromocional="ngModel"
+                        class="admin-input"
+                        placeholder="Ex: 99.90"
+                      />
+
+                      <p class="text-gray-500 text-xs mt-2">
+                        O preço promocional deve ser menor que o preço original.
+                      </p>
+
+                      @if (precoPromocional.invalid && (precoPromocional.touched || produtoForm.submitted)) {
+                        <p class="text-red-400 text-xs mt-2">
+                          Informe um preço promocional válido.
+                        </p>
+                      }
+
+                      @if (
+                        formProduto.promotionalPrice != null &&
+                        formProduto.promotionalPrice > 0 &&
+                        formProduto.promotionalPrice >= formProduto.price
+                      ) {
+                        <p class="text-red-400 text-xs mt-2">
+                          O preço promocional precisa ser menor que o preço original.
+                        </p>
+                      }
+                    </div>
+                  }
+
                 </div>
 
                 <!-- AVALIAÇÕES -->
@@ -502,7 +571,8 @@ import { EcommerceStore } from '../../ecommerce-store';
               </div>
 
             </form>
-          </section>
+          }
+        </section>
 
           <!-- JOGOS CADASTRADOS -->
           <section>
@@ -564,6 +634,12 @@ import { EcommerceStore } from '../../ecommerce-store';
                       >
                         {{ produto.inStock ? 'Disponível' : 'Indisponível' }}
                       </span>
+
+                      @if (produto.promotionalPrice != null) {
+                        <span class="absolute top-3 left-3 text-xs font-bold bg-red-600 text-white px-2 py-1 rounded-full">
+                          PROMOÇÃO
+                        </span>
+                      }
                     </div>
 
                     <div class="p-4">
@@ -575,9 +651,18 @@ import { EcommerceStore } from '../../ecommerce-store';
                         {{ produto.name }}
                       </h3>
 
-                      <p class="text-purple-400 font-bold mb-4">
-                        {{ produto.price | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}
-                      </p>
+                      @if (produto.promotionalPrice != null) {
+                        <p class="text-gray-500 text-xs line-through">
+                          {{ produto.price | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}
+                        </p>
+                        <p class="text-[#8b5cf6] font-bold mb-4">
+                          {{ produto.promotionalPrice | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}
+                        </p>
+                      } @else {
+                        <p class="text-purple-400 font-bold mb-4">
+                          {{ produto.price | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}
+                        </p>
+                      }
 
                       <div class="flex flex-col gap-2">
                         <button
@@ -606,10 +691,7 @@ import { EcommerceStore } from '../../ecommerce-store';
 
         } @else {
 
-          <!-- ===================================== -->
           <!-- VITRINE -->
-          <!-- ===================================== -->
-
           <section>
 
             <div class="mb-8">
@@ -665,7 +747,6 @@ import { EcommerceStore } from '../../ecommerce-store';
                     [class.border-white/5]="!isDestaque(produto)"
                   >
 
-                    <!-- BANNER -->
                     <div class="relative w-full aspect-[920/430] overflow-hidden bg-[#20202b] rounded-t-xl flex items-center justify-center">
 
                       <img
@@ -682,7 +763,6 @@ import { EcommerceStore } from '../../ecommerce-store';
 
                     </div>
 
-                    <!-- INFORMAÇÕES -->
                     <div class="p-4">
 
                       <p class="text-gray-400 text-xs mb-1">
@@ -693,11 +773,19 @@ import { EcommerceStore } from '../../ecommerce-store';
                         {{ produto.name }}
                       </h3>
 
-                      <p class="text-purple-400 font-bold mb-4">
-                        {{ produto.price | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}
-                      </p>
+                      @if (produto.promotionalPrice != null) {
+                        <p class="text-gray-500 text-xs line-through">
+                          {{ produto.price | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}
+                        </p>
+                        <p class="text-[#8b5cf6] font-bold mb-4">
+                          {{ produto.promotionalPrice | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}
+                        </p>
+                      } @else {
+                        <p class="text-purple-400 font-bold mb-4">
+                          {{ produto.price | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}
+                        </p>
+                      }
 
-                      <!-- BOTÃO -->
                       <button
                         type="button"
                         (click)="alternarDestaque(produto)"
@@ -809,6 +897,8 @@ export class AdminDashboardComponent implements OnInit {
 
   secaoAtiva: 'painel' | 'vitrine' = 'painel';
 
+  formularioAberto = false;
+
   produtos: Product[] = [];
 
   carregando = false;
@@ -826,6 +916,8 @@ export class AdminDashboardComponent implements OnInit {
 
   imagemPrincipalErro = false;
   bannerErro = false;
+
+  promocaoAtiva = false;
 
   formProduto: Omit<Product, 'id'> = this.novoProduto();
 
@@ -869,6 +961,7 @@ export class AdminDashboardComponent implements OnInit {
       name: '',
       description: '',
       price: 0,
+      promotionalPrice: null,
       imageUrl: '',
       bannerUrl: '',
       rating: 0,
@@ -877,6 +970,14 @@ export class AdminDashboardComponent implements OnInit {
       category: '',
       featured: false,
     };
+  }
+
+  alterarPromocao(ativa: boolean): void {
+    this.promocaoAtiva = ativa;
+
+    if (!ativa) {
+      this.formProduto.promotionalPrice = null;
+    }
   }
 
   urlValida(valor: string): boolean {
@@ -939,6 +1040,17 @@ export class AdminDashboardComponent implements OnInit {
       Number.isFinite(Number(this.formProduto.price)) &&
       Number(this.formProduto.price) > 0;
 
+    const precoPromocional = this.formProduto.promotionalPrice;
+
+    const promocaoValida =
+      !this.promocaoAtiva ||
+      (
+        precoPromocional != null &&
+        Number.isFinite(Number(precoPromocional)) &&
+        Number(precoPromocional) > 0 &&
+        Number(precoPromocional) < Number(this.formProduto.price)
+      );
+
     const notaValida =
       Number.isFinite(Number(this.formProduto.rating)) &&
       Number(this.formProduto.rating) >= 0 &&
@@ -960,13 +1072,16 @@ export class AdminDashboardComponent implements OnInit {
       !categoriaValida ||
       !descricaoValida ||
       !precoValido ||
+      !promocaoValida ||
       !notaValida ||
       !avaliacoesValidas ||
       !imagemValida ||
       !bannerValido
     ) {
       this.mostrarMensagem(
-        'Verifique os campos do formulário. Todos são obrigatórios, exceto a URL do banner.',
+        this.promocaoAtiva && !promocaoValida
+          ? 'O preço promocional deve ser maior que zero e menor que o preço original.'
+          : 'Verifique os campos do formulário. Todos são obrigatórios, exceto a URL do banner.',
         'erro'
       );
 
@@ -979,8 +1094,11 @@ export class AdminDashboardComponent implements OnInit {
 
     this.cdr.detectChanges();
 
-    const produto = {
+    const produto: Omit<Product, 'id'> = {
       ...this.formProduto,
+      promotionalPrice: this.promocaoAtiva
+        ? Number(this.formProduto.promotionalPrice)
+        : null,
       name: this.formProduto.name.trim(),
       category: this.formProduto.category.trim(),
       description: this.formProduto.description.trim(),
@@ -1006,6 +1124,8 @@ export class AdminDashboardComponent implements OnInit {
         );
 
         this.formProduto = this.novoProduto();
+        this.promocaoAtiva = false;
+        this.formularioAberto = false;
         this.imagemPrincipalErro = false;
         this.bannerErro = false;
 
@@ -1035,10 +1155,15 @@ export class AdminDashboardComponent implements OnInit {
   editarProduto(produto: Product): void {
     this.editandoId = produto.id;
 
+    this.formularioAberto = true;
+
+    this.promocaoAtiva = produto.promotionalPrice != null;
+
     this.formProduto = {
       name: produto.name,
       description: produto.description,
       price: produto.price,
+      promotionalPrice: produto.promotionalPrice ?? null,
       imageUrl: produto.imageUrl,
       bannerUrl: produto.bannerUrl || '',
       rating: produto.rating,
@@ -1106,8 +1231,9 @@ export class AdminDashboardComponent implements OnInit {
   cancelarEdicao(): void {
     this.editandoId = null;
     this.formProduto = this.novoProduto();
+    this.promocaoAtiva = false;
     this.carregando = false;
-
+    this.formularioAberto = false;
     this.imagemPrincipalErro = false;
     this.bannerErro = false;
 
